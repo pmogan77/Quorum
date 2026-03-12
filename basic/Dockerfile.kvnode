@@ -1,0 +1,22 @@
+FROM python:3.11-bookworm
+
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /root
+
+COPY shared/requirements.txt /tmp/requirements.txt
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    iproute2 \
+    iputils-ping \
+    net-tools \
+    procps \
+    openjdk-17-jdk \
+    maven \
+    protobuf-compiler \
+    git \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip install --no-cache-dir -r /tmp/requirements.txt
+
+CMD ["/bin/bash"]

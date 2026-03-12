@@ -1,0 +1,31 @@
+{
+  "lab_name": "QuorumKV",
+  "lab_description": "Quorum key value store lab",
+  "lab_version": "1.0",
+  "lab_author": "Praveen",
+
+  "server_count": 10,
+  "server_name_prefix": "s",
+  "server_start_index": 1,
+  "server_ip_base": "10.0.0.",
+
+  "coordinator_count": 2,
+  "coordinator_name_prefix": "c",
+  "coordinator_start_index": 1,
+  "coordinator_ip_base": "10.0.0.",
+  "coordinator_port": 6000,
+
+  "client_name": "client",
+  "client_ip": "10.0.0.200",
+
+  "network_name": "kvnet",
+  "subnet_cidr": "10.0.0.0/24",
+
+  "grpc_port": 5000,
+
+  "device_image": "quorum-kv-node:latest",
+  "device_memory": "512M",
+  "device_cpus": 1,
+
+  "tombstone": "__DELETED__"
+}
