@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package kv;
+
+service KVStore {
+
+  rpc Get(GetRequest) returns (GetReply);
+
+  rpc Put(PutRequest) returns (PutReply);
+
+}
+
+service AgentKV {
+
+  rpc Get(AgentGetRequest) returns (AgentGetReply);
+
+  rpc Put(AgentPutRequest) returns (AgentPutReply);
+
+  rpc Delete(AgentDeleteRequest) returns (AgentDeleteReply);
+
+}
+
+message GetRequest {
+  string key = 1;
+}
+
+message GetReply {
+  bool found = 1;
+  string value = 2;
+  double timestamp = 3;
+  string client_id = 4;
+  string request_id = 5;
+}
+
+message PutRequest {
+  string key = 1;
+  string value = 2;
+  double timestamp = 3;
+  string client_id = 4;
+  string request_id = 5;
+}
+
+message PutReply {
+  bool success = 1;
+}
+
+message AgentGetRequest {
+  string key = 1;
+}
+
+message AgentGetReply {
+
+  enum Status {
+    OK = 0;
+    NOT_FOUND = 1;
+    QUORUM_FAILED = 2;
+  }
+
+  Status status = 1;
+
+  string value = 2;
+
+}
+
+message AgentPutRequest {
+  string key = 1;
+  string value = 2;
+}
+
+message AgentPutReply {
+  bool success = 1;
+}
+
+message AgentDeleteRequest {
+  string key = 1;
+}
+
+message AgentDeleteReply {
+  bool success = 1;
+}
