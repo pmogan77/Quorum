@@ -205,3 +205,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+*.zip
+*/shared/cluster.json
+*/shared/ycsb/lib/quorum-binding-0.17.0.jar
