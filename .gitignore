@@ -208,3 +208,9 @@ __marimo__/
 *.zip
 */shared/cluster.json
 */shared/ycsb/lib/quorum-binding-0.17.0.jar
+
+*/*.startup
+*/shared/ycsb/quorum-binding/dependency-reduced-pom.xml
+*/shared/kv_pb2_grpc.py
+*/shared/kv_pb2.py
+*/lab.conf

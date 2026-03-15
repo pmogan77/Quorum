@@ -32,5 +32,13 @@
   "redis_name": "redis",
   "redis_ip": "10.0.0.250",
   "redis_port": 6379,
-  "redis_image": "quorum-redis:latest"
+  "redis_image": "quorum-redis:latest",
+
+
+  "adaptive_quorum": {
+    "policy_shift": 1,
+    "read_threshold": 2.0,
+    "write_threshold": 0.5,
+    "min_operations": 50
+  }
 }

@@ -137,10 +137,10 @@ ip link set eth0 up
     lab_lines.append(f'{redis_name}[cpus]="{cpus}"')
 
     redis_startup = f"""#!/bin/bash
-    set -e
-    ip addr add {redis_ip}/{subnet} dev eth0
-    ip link set eth0 up
-    """
+set -e
+ip addr add {redis_ip}/{subnet} dev eth0
+ip link set eth0 up
+"""
 
     (base_dir / f"{redis_name}.startup").write_text(redis_startup)
     (base_dir / redis_name).mkdir(exist_ok=True)
@@ -151,11 +151,23 @@ ip link set eth0 up
     }
 
     # -------------------------
-    # QUORUM VALUES
+    # QUORUM POLICIES
     # -------------------------
 
-    cluster["R"] = (server_count // 2) + 1
-    cluster["W"] = (server_count // 2) + 1
+    W = (server_count // 2) + 1
+    R = server_count - W + 1
+
+    shift = cfg["adaptive_quorum"]["policy_shift"]
+
+    W_read = W + shift
+    R_read = R - shift
+
+    cluster["quorum_policies"] = {
+        "write_opt": {"R": R, "W": W},
+        "read_opt": {"R": R_read, "W": W_read}
+    }
+
+    cluster["adaptive_policy"] = cfg["adaptive_quorum"]
 
     cluster["tombstone"] = cfg["tombstone"]
 
@@ -170,18 +182,12 @@ ip link set eth0 up
         json.dumps(cluster, indent=2)
     )
 
-    # -------------------------
-    # WRITE lab.conf
-    # -------------------------
-
     lab_lines.insert(0, f'LAB_NAME="{cfg["lab_name"]}"')
     lab_lines.insert(1, f'LAB_DESCRIPTION="{cfg["lab_description"]}"')
     lab_lines.insert(2, f'LAB_VERSION="{cfg["lab_version"]}"')
     lab_lines.insert(3, f'LAB_AUTHOR="{cfg["lab_author"]}"')
 
-    (base_dir / "lab.conf").write_text(
-        "\n".join(lab_lines)
-    )
+    (base_dir / "lab.conf").write_text("\n".join(lab_lines))
 
 
 def main():

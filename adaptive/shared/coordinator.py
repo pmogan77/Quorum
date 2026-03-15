@@ -8,19 +8,33 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import kv_pb2
 import kv_pb2_grpc
 
+from adaptive_quorum import AdaptiveQuorumManager
+
+
+# -------------------------------
+# Load cluster configuration
+# -------------------------------
 
 with open("/shared/cluster.json") as f:
     CONFIG = json.load(f)
 
 NODES = CONFIG["nodes"]
-R = CONFIG["R"]
-W = CONFIG["W"]
 TOMBSTONE = CONFIG["tombstone"]
 
 CLIENT_ID = str(uuid.uuid4())
-
 TIMEOUT = 2
 
+
+# -------------------------------
+# Adaptive quorum manager
+# -------------------------------
+
+aq = AdaptiveQuorumManager(CONFIG)
+
+
+# -------------------------------
+# Build gRPC stubs
+# -------------------------------
 
 CHANNELS = {}
 STUBS = {}
@@ -40,7 +54,15 @@ for name, node in NODES.items():
 EXECUTOR = ThreadPoolExecutor(max_workers=len(NODES))
 
 
+# -------------------------------
+# Quorum PUT
+# -------------------------------
+
 def quorum_put(key, value):
+
+    policy = aq.get_quorum(key)
+
+    W = policy["W"]
 
     request_id = str(uuid.uuid4())
 
@@ -68,7 +90,7 @@ def quorum_put(key, value):
 
             return resp.success
 
-        except:
+        except Exception:
 
             return False
 
@@ -77,17 +99,23 @@ def quorum_put(key, value):
     for f in as_completed(futures):
 
         if f.result():
-
             successes += 1
 
         if successes >= W:
-
             return True
 
     return False
 
 
+# -------------------------------
+# Quorum GET
+# -------------------------------
+
 def quorum_get(key):
+
+    policy = aq.get_quorum(key)
+
+    R = policy["R"]
 
     replies = 0
 
@@ -104,7 +132,7 @@ def quorum_get(key):
 
             return resp
 
-        except:
+        except Exception:
 
             return None
 
@@ -119,37 +147,37 @@ def quorum_get(key):
             replies += 1
 
             if r.found:
-
                 responses.append(r)
 
         if replies >= R:
-
             break
 
     if replies < R:
-
         return "QUORUM_FAILED", None
 
     if len(responses) == 0:
-
         return "NOT_FOUND", None
 
     latest = max(
-
         responses,
-
         key=lambda r: (r.timestamp, r.client_id)
-
     )
 
     return "OK", latest.value
 
+
+# -------------------------------
+# Agent service
+# -------------------------------
 
 class AgentService(kv_pb2_grpc.AgentKVServicer):
 
     def Put(self, request, context):
 
         ok = quorum_put(request.key, request.value)
+
+        # async adaptive logic
+        aq.async_record_write(request.key)
 
         return kv_pb2.AgentPutReply(success=ok)
 
@@ -158,6 +186,8 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
         ok = quorum_put(request.key, TOMBSTONE)
 
+        aq.async_record_write(request.key)
+
         return kv_pb2.AgentDeleteReply(success=ok)
 
 
@@ -165,45 +195,40 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
         status, value = quorum_get(request.key)
 
+        # async adaptive logic
+        aq.async_record_read(request.key)
+
         if status == "QUORUM_FAILED":
 
             return kv_pb2.AgentGetReply(
-
                 status=kv_pb2.AgentGetReply.QUORUM_FAILED
-
             )
 
         if status == "NOT_FOUND":
 
             return kv_pb2.AgentGetReply(
-
                 status=kv_pb2.AgentGetReply.NOT_FOUND
-
             )
 
         return kv_pb2.AgentGetReply(
-
             status=kv_pb2.AgentGetReply.OK,
-
             value=value
-
         )
 
+
+# -------------------------------
+# Start coordinator server
+# -------------------------------
 
 def serve():
 
     server = grpc.server(
-
         ThreadPoolExecutor(max_workers=32)
-
     )
 
     kv_pb2_grpc.add_AgentKVServicer_to_server(
-
         AgentService(),
-
         server
-
     )
 
     server.add_insecure_port("[::]:6000")
