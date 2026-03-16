@@ -20,6 +20,7 @@ TOMBSTONE = CONFIG["tombstone"]
 CLIENT_ID = str(uuid.uuid4())
 TIMEOUT = 2
 
+POLICY_CHANGE_LIKELIHOOD = 0.5
 
 # build gRPC channels and stubs for all storage nodes
 CHANNELS = {}
@@ -40,7 +41,7 @@ EXECUTOR = ThreadPoolExecutor(max_workers=len(NODES))
 
 
 # initialize adaptive quorum manager
-aq = AdaptiveQuorumManager(CONFIG, STUBS, EXECUTOR, CLIENT_ID, TIMEOUT)
+aq = AdaptiveQuorumManager(CONFIG, STUBS, EXECUTOR, CLIENT_ID, TIMEOUT, POLICY_CHANGE_LIKELIHOOD)
 
 
 # agent service implementation

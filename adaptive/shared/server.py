@@ -63,6 +63,7 @@ class KVServer(kv_pb2_grpc.KVStoreServicer):
 
         return kv_pb2.PutReply(success=True)
 
+    # THIS IS DEPRECATED. DELETE REQUESTS SHOULD BE SENT AS PUTS WITH THE TOMBSTONE VALUE
     def Delete(self, request, context):
 
         key = request.key

@@ -1,3 +1,5 @@
+from random import random
+
 import grpc
 import kv_pb2
 import kv_pb2_grpc
@@ -11,7 +13,7 @@ from concurrent.futures import as_completed
 
 class AdaptiveQuorumManager:
 
-    def __init__(self, config, stubs, executor, client_id, timeout):
+    def __init__(self, config, stubs, executor, client_id, timeout, policy_change_likelihood):
 
         redis_cfg = config["redis"]
 
@@ -29,7 +31,7 @@ class AdaptiveQuorumManager:
         self.executor = executor
         self.client_id = client_id
         self.timeout = timeout
-
+        self.policy_change_likelihood = policy_change_likelihood
         self.strict_policy = {
             "R": max(self.write_opt["R"], self.read_opt["R"]),
             "W": max(self.write_opt["W"], self.read_opt["W"])
@@ -174,16 +176,18 @@ class AdaptiveQuorumManager:
         repair_thread.start()
 
     def _repair_transition(self, key):
+        try:
+            status, value = self.quorum_get(key)
 
-        status, value = self.quorum_get(key)
+            if status != "OK":
+                return
 
-        if status != "OK":
-            return
+            success = self.quorum_put(key, value)
 
-        success = self.quorum_put(key, value)
-
-        if success:
-            self.finalize_transition(key)
+            if success:
+                self.finalize_transition(key)
+        finally:
+            self.redis_safe(lambda: self.redis.delete(self.lock_key(key)))
 
     def finalize_transition(self, key):
 
@@ -208,7 +212,7 @@ class AdaptiveQuorumManager:
             )
         )
 
-        self.redis_safe(lambda: self.redis.delete(self.lock_key(key)))
+        # self.redis_safe(lambda: self.redis.delete(self.lock_key(key)))
 
     def quorum_put(self, key, value):
 
@@ -300,7 +304,9 @@ class AdaptiveQuorumManager:
 
         def task():
             self.record_read(key)
-            self.maybe_trigger_transition(key)
+
+            if random() < self.policy_change_likelihood:
+                self.maybe_trigger_transition(key)
 
         thread = threading.Thread(target=task)
         thread.start()
@@ -312,8 +318,9 @@ class AdaptiveQuorumManager:
 
             # opportunistic completion in case proactive repair dies
             self.finalize_transition(key)
-
-            self.maybe_trigger_transition(key)
+            
+            if random() < self.policy_change_likelihood:
+                self.maybe_trigger_transition(key)
 
         thread = threading.Thread(target=task)
         thread.start()
