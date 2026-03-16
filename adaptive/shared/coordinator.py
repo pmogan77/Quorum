@@ -10,10 +10,7 @@ import kv_pb2_grpc
 from adaptive_quorum import AdaptiveQuorumManager
 
 
-# -------------------------------
-# Load cluster configuration
-# -------------------------------
-
+# Load cluster config
 with open("/shared/cluster.json") as f:
     CONFIG = json.load(f)
 
@@ -24,10 +21,7 @@ CLIENT_ID = str(uuid.uuid4())
 TIMEOUT = 2
 
 
-# -------------------------------
-# Build gRPC stubs
-# -------------------------------
-
+# build gRPC channels and stubs for all storage nodes
 CHANNELS = {}
 STUBS = {}
 
@@ -45,23 +39,11 @@ for name, node in NODES.items():
 EXECUTOR = ThreadPoolExecutor(max_workers=len(NODES))
 
 
-# -------------------------------
-# Adaptive quorum manager
-# -------------------------------
-
-aq = AdaptiveQuorumManager(
-    CONFIG,
-    STUBS,
-    EXECUTOR,
-    CLIENT_ID,
-    TIMEOUT
-)
+# initialize adaptive quorum manager
+aq = AdaptiveQuorumManager(CONFIG, STUBS, EXECUTOR, CLIENT_ID, TIMEOUT)
 
 
-# -------------------------------
-# Agent service
-# -------------------------------
-
+# agent service implementation
 class AgentService(kv_pb2_grpc.AgentKVServicer):
 
     def Put(self, request, context):
@@ -87,35 +69,20 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
         aq.async_record_read(request.key)
 
         if status == "QUORUM_FAILED":
-            return kv_pb2.AgentGetReply(
-                status=kv_pb2.AgentGetReply.QUORUM_FAILED
-            )
+            return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.QUORUM_FAILED)
 
         if status == "NOT_FOUND":
-            return kv_pb2.AgentGetReply(
-                status=kv_pb2.AgentGetReply.NOT_FOUND
-            )
+            return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.NOT_FOUND)
 
-        return kv_pb2.AgentGetReply(
-            status=kv_pb2.AgentGetReply.OK,
-            value=value
-        )
+        return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.OK, value=value)
 
 
-# -------------------------------
-# Start coordinator server
-# -------------------------------
-
+# start gRPC server to listen for client requests
 def serve():
 
-    server = grpc.server(
-        ThreadPoolExecutor(max_workers=32)
-    )
+    server = grpc.server(ThreadPoolExecutor(max_workers=32))
 
-    kv_pb2_grpc.add_AgentKVServicer_to_server(
-        AgentService(),
-        server
-    )
+    kv_pb2_grpc.add_AgentKVServicer_to_server(AgentService(), server)
 
     server.add_insecure_port("[::]:6000")
 

@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 
 
-
 def generate_lab(base_dir, cfg):
 
     server_count = cfg["server_count"]
@@ -30,15 +29,9 @@ def generate_lab(base_dir, cfg):
 
     lab_lines = []
 
-    cluster = {
-        "nodes": {},
-        "coordinators": {}
-    }
+    cluster = {"nodes": {}, "coordinators": {}}
 
-    # -------------------------
-    # STORAGE SERVERS
-    # -------------------------
-
+    # storage nodes
     for i in range(server_count):
 
         node_index = server_start + i
@@ -61,15 +54,9 @@ python -u /shared/server.py --host {ip} --port {grpc_port} --node-id {name} >/tm
 
         (base_dir / name).mkdir(exist_ok=True)
 
-        cluster["nodes"][name] = {
-            "host": ip,
-            "port": grpc_port
-        }
+        cluster["nodes"][name] = {"host": ip, "port": grpc_port}
 
-    # -------------------------
-    # COORDINATORS
-    # -------------------------
-
+    # coordinators
     coord_base_ip = cfg["coordinator_ip_base"]
 
     for i in range(coord_count):
@@ -95,15 +82,9 @@ python -u /shared/coordinator.py --node-id {name} >/tmp/coordinator.log 2>&1 &
 
         (base_dir / name).mkdir(exist_ok=True)
 
-        cluster["coordinators"][name] = {
-            "host": ip,
-            "port": 6000
-        }
+        cluster["coordinators"][name] = {"host": ip, "port": 6000}
 
-    # -------------------------
-    # CLIENT NODE
-    # -------------------------
-
+    # client node
     client_name = cfg["client_name"]
     client_ip = cfg["client_ip"]
 
@@ -122,10 +103,7 @@ ip link set eth0 up
 
     (base_dir / client_name).mkdir(exist_ok=True)
 
-    # -------------------------
-    # REDIS NODE
-    # -------------------------
-
+    # redis node
     redis_name = cfg["redis_name"]
     redis_ip = cfg["redis_ip"]
     redis_port = cfg["redis_port"]
@@ -145,15 +123,9 @@ ip link set eth0 up
     (base_dir / f"{redis_name}.startup").write_text(redis_startup)
     (base_dir / redis_name).mkdir(exist_ok=True)
 
-    cluster["redis"] = {
-        "host": redis_ip,
-        "port": redis_port
-    }
+    cluster["redis"] = {"host": redis_ip, "port": redis_port}
 
-    # -------------------------
-    # QUORUM POLICIES
-    # -------------------------
-
+    # calculate quorum values
     W = (server_count // 2) + 1
     R = server_count - W + 1
 
@@ -164,23 +136,18 @@ ip link set eth0 up
 
     cluster["quorum_policies"] = {
         "write_opt": {"R": R, "W": W},
-        "read_opt": {"R": R_read, "W": W_read}
+        "read_opt": {"R": R_read, "W": W_read},
     }
 
     cluster["adaptive_policy"] = cfg["adaptive_quorum"]
 
     cluster["tombstone"] = cfg["tombstone"]
 
-    # -------------------------
-    # WRITE cluster.json
-    # -------------------------
-
+    # auto-generate cluster.json
     shared = base_dir / "shared"
     shared.mkdir(exist_ok=True)
 
-    (shared / "cluster.json").write_text(
-        json.dumps(cluster, indent=2)
-    )
+    (shared / "cluster.json").write_text(json.dumps(cluster, indent=2))
 
     lab_lines.insert(0, f'LAB_NAME="{cfg["lab_name"]}"')
     lab_lines.insert(1, f'LAB_DESCRIPTION="{cfg["lab_description"]}"')

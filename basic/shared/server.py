@@ -37,7 +37,7 @@ class KVServer(kv_pb2_grpc.KVStoreServicer):
             value=entry["value"],
             timestamp=entry["timestamp"],
             client_id=entry["client_id"],
-            request_id=entry["request_id"]
+            request_id=entry["request_id"],
         )
 
     def Put(self, request, context):
@@ -50,7 +50,7 @@ class KVServer(kv_pb2_grpc.KVStoreServicer):
             "value": request.value,
             "timestamp": request.timestamp,
             "client_id": request.client_id,
-            "request_id": request.request_id
+            "request_id": request.request_id,
         }
 
         if key not in store:
@@ -73,7 +73,7 @@ class KVServer(kv_pb2_grpc.KVStoreServicer):
             "value": TOMBSTONE,
             "timestamp": 0,
             "client_id": "",
-            "request_id": ""
+            "request_id": "",
         }
 
         return kv_pb2.DeleteReply(success=True)
@@ -83,10 +83,7 @@ def serve():
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
 
-    kv_pb2_grpc.add_KVStoreServicer_to_server(
-        KVServer(),
-        server
-    )
+    kv_pb2_grpc.add_KVStoreServicer_to_server(KVServer(), server)
 
     server.add_insecure_port("[::]:5000")
     server.start()

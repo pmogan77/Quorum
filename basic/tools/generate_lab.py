@@ -34,10 +34,8 @@ def generate_lab(base_dir, cfg):
         "coordinators": {}
     }
 
-    # -------------------------
-    # STORAGE SERVERS
-    # -------------------------
-
+    
+    # storage servers
     for i in range(server_count):
 
         node_index = server_start + i
@@ -65,10 +63,7 @@ python -u /shared/server.py --host {ip} --port {grpc_port} --node-id {name} >/tm
             "port": grpc_port
         }
 
-    # -------------------------
-    # COORDINATORS
-    # -------------------------
-
+    # coordinators
     coord_base_ip = cfg["coordinator_ip_base"]
 
     for i in range(coord_count):
@@ -99,10 +94,7 @@ python -u /shared/coordinator.py --node-id {name} >/tmp/coordinator.log 2>&1 &
             "port": 6000
         }
 
-    # -------------------------
-    # CLIENT NODE
-    # -------------------------
-
+    # client nodes
     client_name = cfg["client_name"]
     client_ip = cfg["client_ip"]
 
@@ -121,19 +113,13 @@ ip link set eth0 up
 
     (base_dir / client_name).mkdir(exist_ok=True)
 
-    # -------------------------
-    # QUORUM VALUES
-    # -------------------------
-
+    # quorum settings
     cluster["R"] = (server_count // 2) + 1
     cluster["W"] = (server_count // 2) + 1
 
     cluster["tombstone"] = cfg["tombstone"]
 
-    # -------------------------
-    # WRITE cluster.json
-    # -------------------------
-
+    # auto-generate cluster.json
     shared = base_dir / "shared"
     shared.mkdir(exist_ok=True)
 
@@ -141,10 +127,7 @@ ip link set eth0 up
         json.dumps(cluster, indent=2)
     )
 
-    # -------------------------
-    # WRITE lab.conf
-    # -------------------------
-
+    # auto generate lab.conf
     lab_lines.insert(0, f'LAB_NAME="{cfg["lab_name"]}"')
     lab_lines.insert(1, f'LAB_DESCRIPTION="{cfg["lab_description"]}"')
     lab_lines.insert(2, f'LAB_VERSION="{cfg["lab_version"]}"')

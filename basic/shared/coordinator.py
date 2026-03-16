@@ -53,17 +53,14 @@ def quorum_put(key, value):
         try:
 
             resp = STUBS[node].Put(
-
                 kv_pb2.PutRequest(
                     key=key,
                     value=value,
                     timestamp=timestamp,
                     client_id=CLIENT_ID,
-                    request_id=request_id
+                    request_id=request_id,
                 ),
-
-                timeout=TIMEOUT
-
+                timeout=TIMEOUT,
             )
 
             return resp.success
@@ -97,10 +94,7 @@ def quorum_get(key):
 
         try:
 
-            resp = STUBS[node].Get(
-                kv_pb2.GetRequest(key=key),
-                timeout=TIMEOUT
-            )
+            resp = STUBS[node].Get(kv_pb2.GetRequest(key=key), timeout=TIMEOUT)
 
             return resp
 
@@ -134,13 +128,7 @@ def quorum_get(key):
 
         return "NOT_FOUND", None
 
-    latest = max(
-
-        responses,
-
-        key=lambda r: (r.timestamp, r.client_id)
-
-    )
+    latest = max(responses, key=lambda r: (r.timestamp, r.client_id))
 
     return "OK", latest.value
 
@@ -153,13 +141,11 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
         return kv_pb2.AgentPutReply(success=ok)
 
-
     def Delete(self, request, context):
 
         ok = quorum_put(request.key, TOMBSTONE)
 
         return kv_pb2.AgentDeleteReply(success=ok)
-
 
     def Get(self, request, context):
 
@@ -167,44 +153,20 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
         if status == "QUORUM_FAILED":
 
-            return kv_pb2.AgentGetReply(
-
-                status=kv_pb2.AgentGetReply.QUORUM_FAILED
-
-            )
+            return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.QUORUM_FAILED)
 
         if status == "NOT_FOUND":
 
-            return kv_pb2.AgentGetReply(
+            return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.NOT_FOUND)
 
-                status=kv_pb2.AgentGetReply.NOT_FOUND
-
-            )
-
-        return kv_pb2.AgentGetReply(
-
-            status=kv_pb2.AgentGetReply.OK,
-
-            value=value
-
-        )
+        return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.OK, value=value)
 
 
 def serve():
 
-    server = grpc.server(
+    server = grpc.server(ThreadPoolExecutor(max_workers=32))
 
-        ThreadPoolExecutor(max_workers=32)
-
-    )
-
-    kv_pb2_grpc.add_AgentKVServicer_to_server(
-
-        AgentService(),
-
-        server
-
-    )
+    kv_pb2_grpc.add_AgentKVServicer_to_server(AgentService(), server)
 
     server.add_insecure_port("[::]:6000")
 
