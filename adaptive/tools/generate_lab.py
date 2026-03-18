@@ -143,6 +143,8 @@ ip link set eth0 up
 
     cluster["tombstone"] = cfg["tombstone"]
 
+    cluster["metrics"] = cfg["metrics"]
+
     # auto-generate cluster.json
     shared = base_dir / "shared"
     shared.mkdir(exist_ok=True)

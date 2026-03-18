@@ -1,6 +1,7 @@
 import grpc
 import json
 import uuid
+import time
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -8,6 +9,8 @@ import kv_pb2
 import kv_pb2_grpc
 
 from adaptive_quorum import AdaptiveQuorumManager
+
+from key_metrics import KeyMetrics
 
 
 # Load cluster config
@@ -42,15 +45,26 @@ EXECUTOR = ThreadPoolExecutor(max_workers=len(NODES))
 # initialize adaptive quorum manager
 aq = AdaptiveQuorumManager(CONFIG, STUBS, EXECUTOR, CLIENT_ID, TIMEOUT)
 
+# initialize metrics logger
+aq_metrics = KeyMetrics(CONFIG)
+
 
 # agent service implementation
 class AgentService(kv_pb2_grpc.AgentKVServicer):
+
+    def __init__(self):
+        self.request_count = 0
+        self.logging_freq = 100
 
     def Put(self, request, context):
 
         ok = aq.quorum_put(request.key, request.value)
 
         aq.async_record_write(request.key)
+        
+        self.request_count += 1
+
+        self.log_metrics(request.key)
 
         return kv_pb2.AgentPutReply(success=ok)
 
@@ -59,14 +73,26 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
         ok = aq.quorum_put(request.key, TOMBSTONE)
 
         aq.async_record_write(request.key)
+        
+        self.request_count += 1
+
+        self.log_metrics(request.key)
 
         return kv_pb2.AgentDeleteReply(success=ok)
 
     def Get(self, request, context):
 
+        start_time = time.time()
+
         status, value = aq.quorum_get(request.key)
+        
+        aq_metrics.async_record_read_latency(request.key, time.time() - start_time)
 
         aq.async_record_read(request.key)
+        
+        self.request_count += 1
+        
+        self.log_metrics(request.key)
 
         if status == "QUORUM_FAILED":
             return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.QUORUM_FAILED)
@@ -75,6 +101,17 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
             return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.NOT_FOUND)
 
         return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.OK, value=value)
+
+    def log_metrics(self, key):
+
+        if self.request_count % self.logging_freq == 0:
+
+            print(f"\n({self.request_count}) KEY = ", key)
+
+            print("Policy = ", aq.get_state(key))
+
+            metrics = aq_metrics.get_metrics(key)
+            print(json.dumps(metrics, indent=4), "\n")
 
 
 # start gRPC server to listen for client requests
