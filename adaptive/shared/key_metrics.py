@@ -52,7 +52,7 @@ class KeyMetrics:
         if fields:
             fields = {k: float(v) for k, v in fields.items() }
             reads = fields.get("reads")
-            total_read_latency = reads * fields.get("total_ave_read_latency")
+            total_read_latency = fields.get("total_read_latency")
             recent_read_latency = recent_reads * fields.get("recent_ave_read_latency")
 
         return reads, total_read_latency, recent_read_latency
@@ -80,8 +80,6 @@ class KeyMetrics:
             lambda: self.redis.hgetall(self.key_name(key)),
             None
         )
-        if metrics:
-            metrics["p95_read_latency"] = self.calc_percentile(key, 0.95)
 
         # Currently: runtime, throughput, read/write acc not being used
         if not(metrics):
@@ -90,12 +88,16 @@ class KeyMetrics:
                 "writes": 0,
                 "total_runtime": 0,
                 "throughput": 0,
-                "total_read_acc": 0,
-                "total_write_acc": 0,
-                "total_ave_read_latency": 0,
-                "total_ave_write_latency": 0,
+                "read_acc": 0,
+                "write_acc": 0,
+                "total_read_latency": 0,
+                "total_write_latency": 0,
+                "ave_read_latency": 0,
+                "ave_write_latency": 0,
                 "recent_ave_read_latency": 0,
                 "recent_ave_write_latency": 0,
+                "recent_p95_read_latency": 0,
+                "recent_p95_write_latency": 0
             }
 
             self.redis_safe(
@@ -105,10 +107,8 @@ class KeyMetrics:
                 )
             )
 
-            default_metrics = dict(init_metrics)
-            default_metrics["p95_read_latency"] = 0
-            return default_metrics
-
+            return init_metrics
+        
         return metrics
         
     def redis_record_read(self, key, latency):
@@ -152,13 +152,19 @@ class KeyMetrics:
         added_latency = sum([item[1] for item in self.temp_reads[key]])
         total_read_latency += added_latency
         recent_read_latency += added_latency
-        total_ave_read_latency = total_read_latency / reads
-        recent_ave_read_latency = recent_read_latency / num_recent
 
-        pipe.hset(key_name, "total_ave_read_latency", total_ave_read_latency)
-        pipe.hset(key_name, "recent_ave_read_latency", recent_ave_read_latency)
+        pipe.hset(key_name, "total_read_latency", total_read_latency)
+        pipe.hset(key_name, "ave_read_latency", total_read_latency / reads)
+        pipe.hset(key_name, "recent_ave_read_latency", recent_read_latency / num_recent)
 
-        return pipe.execute()
+        result = pipe.execute()
+
+        self.redis_safe(
+            lambda: self.redis.hset(key_name, "recent_p95_read_latency", 
+                                    self.calc_percentile(key, 0.95))
+        )
+
+        return result
     
     def record_read(self, key, latency):
         with self.read_lock:
