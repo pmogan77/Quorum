@@ -113,11 +113,35 @@ ip link set eth0 up
 
     (base_dir / client_name).mkdir(exist_ok=True)
 
+    # redis node
+    redis_name = cfg["redis_name"]
+    redis_ip = cfg["redis_ip"]
+    redis_port = cfg["redis_port"]
+    redis_image = cfg["redis_image"]
+
+    lab_lines.append(f'{redis_name}[0]="{network}"')
+    lab_lines.append(f'{redis_name}[image]="{redis_image}"')
+    lab_lines.append(f'{redis_name}[mem]="{mem}"')
+    lab_lines.append(f'{redis_name}[cpus]="{cpus}"')
+
+    redis_startup = f"""#!/bin/bash
+set -e
+ip addr add {redis_ip}/{subnet} dev eth0
+ip link set eth0 up
+"""
+
+    (base_dir / f"{redis_name}.startup").write_text(redis_startup)
+    (base_dir / redis_name).mkdir(exist_ok=True)
+
+    cluster["redis"] = {"host": redis_ip, "port": redis_port}
+
     # quorum settings
     cluster["R"] = (server_count // 2) + 1
     cluster["W"] = (server_count // 2) + 1
 
     cluster["tombstone"] = cfg["tombstone"]
+
+    cluster["metrics"] = cfg["metrics"]
 
     # auto-generate cluster.json
     shared = base_dir / "shared"

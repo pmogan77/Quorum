@@ -27,5 +27,15 @@
   "device_memory": "512M",
   "device_cpus": 1,
 
-  "tombstone": "__DELETED__"
+  "tombstone": "__DELETED__",
+
+  "redis_name": "redis",
+  "redis_ip": "10.0.0.250",
+  "redis_port": 6379,
+  "redis_image": "quorum-redis:latest",
+
+  "metrics": {
+    "window_length": 100,
+    "update_freq": 5
+  }
 }

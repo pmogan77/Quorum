@@ -1,0 +1,17 @@
+FROM redis:7
+
+USER root
+
+RUN apt-get update && apt-get install -y \
+    iproute2 \
+    net-tools \
+    procps \
+    iputils-ping \
+    dnsutils \
+    redis-tools \
+    curl \
+    vim \
+    less \
+ && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 6379
