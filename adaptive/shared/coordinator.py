@@ -58,7 +58,11 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
     def Put(self, request, context):
 
+        start_time = time.time()
+
         ok = aq.quorum_put(request.key, request.value)
+
+        aq_metrics.async_record_write_latency(request.key, time.time() - start_time)
 
         aq.async_record_write(request.key)
         
@@ -70,7 +74,11 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
     def Delete(self, request, context):
 
+        start_time = time.time()
+
         ok = aq.quorum_put(request.key, TOMBSTONE)
+
+        aq_metrics.async_record_write_latency(request.key, time.time() - start_time)
 
         aq.async_record_write(request.key)
         
@@ -91,7 +99,7 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
         aq.async_record_read(request.key)
         
         self.request_count += 1
-        
+
         self.log_metrics(request.key)
 
         if status == "QUORUM_FAILED":
