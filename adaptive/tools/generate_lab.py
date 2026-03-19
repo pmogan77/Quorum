@@ -145,6 +145,8 @@ ip link set eth0 up
     cluster["tombstone"] = cfg["tombstone"]
     cluster["adaptive_mode"] = cfg["adaptive_mode"]
 
+    cluster["metrics"] = cfg["metrics"]
+
     # auto-generate cluster.json
     shared = base_dir / "shared"
     shared.mkdir(exist_ok=True)

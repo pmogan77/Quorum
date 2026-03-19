@@ -11,10 +11,17 @@ from abc import ABC, abstractmethod
 
 from concurrent.futures import as_completed
 
+UNLOCK_SCRIPT = """
+if redis.call('get', KEYS[1]) == ARGV[1] then
+    return redis.call('del', KEYS[1])
+else
+    return 0
+end
+"""
+
 class AdaptiveQuorumManager(ABC):
 
     def __init__(self, config, stubs, executor, client_id, timeout):
-
         redis_cfg = config["redis"]
 
         self.redis = redis.Redis(
@@ -30,6 +37,8 @@ class AdaptiveQuorumManager(ABC):
         self.executor = executor
         self.client_id = client_id
         self.timeout = timeout
+        self.lock_ttl_ms = self.policy_cfg.get("lock_ttl_ms", 10000)
+
         self.strict_policy = {
             "R": max(self.write_opt["R"], self.read_opt["R"]),
             "W": max(self.write_opt["W"], self.read_opt["W"])
@@ -46,6 +55,20 @@ class AdaptiveQuorumManager(ABC):
             return fn()
         except Exception:
             return default
+
+    def release_lock(self, key, token):
+        if not token:
+            return
+
+        self.redis_safe(
+            lambda: self.redis.eval(
+                UNLOCK_SCRIPT,
+                1,
+                self.lock_key(key),
+                token
+            ),
+            0
+        )
 
     @abstractmethod
     def get_state(self, key):
@@ -95,8 +118,15 @@ class AdaptiveQuorumManager(ABC):
 
     def start_transition(self, key, target):
 
+        lock_token = str(uuid.uuid4())
+
         locked = self.redis_safe(
-            lambda: self.redis.setnx(self.lock_key(key), 1),
+            lambda: self.redis.set(
+                self.lock_key(key),
+                lock_token,
+                nx=True,
+                px=self.lock_ttl_ms
+            ),
             False
         )
 
@@ -114,7 +144,7 @@ class AdaptiveQuorumManager(ABC):
                 )
             )
 
-            self.redis_safe(lambda: self.redis.delete(self.lock_key(key)))
+            self.release_lock(key, lock_token)
             return
 
         # transition to read_opt
@@ -130,11 +160,11 @@ class AdaptiveQuorumManager(ABC):
 
         repair_thread = threading.Thread(
             target=self._repair_transition,
-            args=(key,)
+            args=(key, lock_token)
         )
         repair_thread.start()
 
-    def _repair_transition(self, key):
+    def _repair_transition(self, key, lock_token):
         try:
             quorum_get_dict = self.quorum_get(key)
 
@@ -145,8 +175,9 @@ class AdaptiveQuorumManager(ABC):
 
             if quorum_put_dict["result"]:
                 self.finalize_transition(key)
+
         finally:
-            self.redis_safe(lambda: self.redis.delete(self.lock_key(key)))
+            self.release_lock(key, lock_token)
 
     def finalize_transition(self, key):
 
@@ -170,8 +201,6 @@ class AdaptiveQuorumManager(ABC):
                 }
             )
         )
-
-        # self.redis_safe(lambda: self.redis.delete(self.lock_key(key)))
 
     def quorum_put(self, key, value):
 
