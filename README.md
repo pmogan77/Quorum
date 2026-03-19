@@ -65,6 +65,14 @@ Run the workload:
 ./bin/ycsb run basic -db site.ycsb.db.quorum.QuorumDB -P workloads/workloada -P quorum-binding/conf/quorum.properties -p recordcount=10 -p fieldcount=1 -p operationcount=100
 ```
 
+Reset metrics after running load:
+
+```
+cd ..
+python signal_run_start.py
+```
+This will remove all keys from the Redis server and reset the temporary in-memory metrics dictionaries. 
+
 ------------------------------------------------------------------------
 
 ## Running Redis
