@@ -59,6 +59,14 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
     def Put(self, request, context):
 
+        if request.key == "SIGNAL_START_RUN_PHASE":
+
+            print("\nTRIGGER RECEIVED: preparing run phase\n")
+
+            aq_metrics.reset_metrics()
+
+            return kv_pb2.AgentPutReply(success=True)
+
         start_time = time.time()
 
         ok = aq.quorum_put(request.key, request.value)

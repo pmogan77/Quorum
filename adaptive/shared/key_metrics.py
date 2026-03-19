@@ -44,6 +44,17 @@ class KeyMetrics:
             print(f"\nREDIS ERROR: {e}\n")
             return default
     
+    def reset_metrics(self):
+        with self.read_lock:
+            self.temp_latencies["read"] = {}
+        
+        with self.write_lock:
+            self.temp_latencies["write"] = {}
+
+        namespace = "aq_metrics"
+        for key in self.redis.scan_iter(match=f"{namespace}*", count=1000):
+            self.redis.delete(key)
+    
     def aggregate_metrics(self, key, operation: Literal["read", "write"]):
         base_key = self.base_key(key, operation)
         queue_key = self.queue_key(key, operation)
@@ -54,12 +65,10 @@ class KeyMetrics:
             lambda: self.redis.hgetall(base_key), 
             None
         )
-        print("\nfields = ", fields)
         recent_ops = self.redis_safe(
             lambda: self.redis.llen(queue_key),
             0
         )
-        print("\nrecent_ops = ", recent_ops)
         
         if fields:
             fields = { k: float(v) for k, v in fields.items() }
@@ -149,9 +158,6 @@ class KeyMetrics:
 
         self.get_operation_metrics(key, operation)  # Populates Redis data if missing
         ops, total_latency, recent_latency = self.aggregate_metrics(key, operation)
-        print("\nops = ", ops)
-        print("total_latency = ", total_latency)
-        print("recent_latency = ", recent_latency, "\n")
 
         start_index = max(self.window_length - self.update_freq, 0)
         overflow = self.redis_safe(
@@ -163,7 +169,6 @@ class KeyMetrics:
             0
         )
         num_recent = num_recent - len(overflow) + self.update_freq
-        print("num_recent = ", num_recent)
 
         # Redis metric updates
         pipe = self.redis.pipeline()
