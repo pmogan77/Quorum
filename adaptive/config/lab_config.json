@@ -43,11 +43,12 @@
     "write_threshold": 0.5,
     "min_operations": 50
   },
-  "adaptive_mode": "ratio",
+  "adaptive_mode": "timer_exponential",
   "adaptive_quorum_timer_exponential_update": {
     "timeout": 30,
     "alpha": 0.1,
     "changeThreshold": 5,
     "consecutiveChangeThresh": 3
-  }
+  },
+  "lock_ttl_ms": 10000
 }

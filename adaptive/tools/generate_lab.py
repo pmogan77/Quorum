@@ -146,6 +146,7 @@ ip link set eth0 up
     cluster["adaptive_mode"] = cfg["adaptive_mode"]
 
     cluster["metrics"] = cfg["metrics"]
+    cluster["lock_ttl_ms"] = cfg["lock_ttl_ms"]
 
     # auto-generate cluster.json
     shared = base_dir / "shared"

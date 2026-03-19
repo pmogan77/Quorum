@@ -37,7 +37,7 @@ class AdaptiveQuorumManager(ABC):
         self.executor = executor
         self.client_id = client_id
         self.timeout = timeout
-        self.lock_ttl_ms = self.policy_cfg.get("lock_ttl_ms", 10000)
+        self.lock_ttl_ms = config.get("lock_ttl_ms", 10000)
 
         self.strict_policy = {
             "R": max(self.write_opt["R"], self.read_opt["R"]),
