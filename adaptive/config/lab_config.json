@@ -34,11 +34,17 @@
   "redis_port": 6379,
   "redis_image": "quorum-redis:latest",
 
-
-  "adaptive_quorum": {
+  "adaptive_quorum_ratio_update": {
     "policy_shift": 1,
     "read_threshold": 2.0,
     "write_threshold": 0.5,
     "min_operations": 50
+  },
+  "adaptive_mode": "ratio",
+  "adaptive_quorum_timer_exponential_update": {
+    "timeout": 30,
+    "alpha": 0.1,
+    "changeThreshold": 5,
+    "consecutiveChangeThresh": 3
   }
 }

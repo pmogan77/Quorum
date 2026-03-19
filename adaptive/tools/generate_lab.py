@@ -129,7 +129,7 @@ ip link set eth0 up
     W = (server_count // 2) + 1
     R = server_count - W + 1
 
-    shift = cfg["adaptive_quorum"]["policy_shift"]
+    shift = cfg["adaptive_quorum_ratio_update"]["policy_shift"]
 
     W_read = W + shift
     R_read = R - shift
@@ -139,9 +139,11 @@ ip link set eth0 up
         "read_opt": {"R": R_read, "W": W_read},
     }
 
-    cluster["adaptive_policy"] = cfg["adaptive_quorum"]
+    cluster["adaptive_policy_ratio_update"] = cfg["adaptive_quorum_ratio_update"]
+    cluster["adaptive_policy_timer_exponential_update"] = cfg["adaptive_quorum_timer_exponential_update"]
 
     cluster["tombstone"] = cfg["tombstone"]
+    cluster["adaptive_mode"] = cfg["adaptive_mode"]
 
     # auto-generate cluster.json
     shared = base_dir / "shared"

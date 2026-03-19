@@ -7,7 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 import kv_pb2
 import kv_pb2_grpc
 
-from adaptive_quorum import AdaptiveQuorumManager
+from adaptive_quorum import AdaptiveQuorumManager, AdaptiveQuorumManagerRatioUpdate, \
+    AdaptiveQuorumManagerTimerExponentialUpdate
 
 
 # Load cluster config
@@ -19,8 +20,6 @@ TOMBSTONE = CONFIG["tombstone"]
 
 CLIENT_ID = str(uuid.uuid4())
 TIMEOUT = 2
-
-POLICY_CHANGE_LIKELIHOOD = 0.5
 
 # build gRPC channels and stubs for all storage nodes
 CHANNELS = {}
@@ -39,43 +38,46 @@ for name, node in NODES.items():
 
 EXECUTOR = ThreadPoolExecutor(max_workers=len(NODES))
 
-
-# initialize adaptive quorum manager
-aq = AdaptiveQuorumManager(CONFIG, STUBS, EXECUTOR, CLIENT_ID, TIMEOUT, POLICY_CHANGE_LIKELIHOOD)
-
+if CONFIG["adaptive_mode"] == "ratio":
+    POLICY_CHANGE_LIKELIHOOD = 0.5
+    # initialize adaptive quorum manager
+    aq = AdaptiveQuorumManagerRatioUpdate(CONFIG, STUBS, EXECUTOR, CLIENT_ID, \
+                               TIMEOUT, POLICY_CHANGE_LIKELIHOOD)
+elif CONFIG["adaptive_mode"] == "timer_exponential":
+    aq = AdaptiveQuorumManagerTimerExponentialUpdate(CONFIG, STUBS, EXECUTOR, CLIENT_ID, TIMEOUT)
 
 # agent service implementation
 class AgentService(kv_pb2_grpc.AgentKVServicer):
 
     def Put(self, request, context):
 
-        ok = aq.quorum_put(request.key, request.value)
+        quorum_put_dict = aq.quorum_put(request.key, request.value)
 
-        aq.async_record_write(request.key)
+        aq.async_record_write(request.key, quorum_put_dict)
 
-        return kv_pb2.AgentPutReply(success=ok)
+        return kv_pb2.AgentPutReply(success=quorum_put_dict["result"])
 
     def Delete(self, request, context):
 
-        ok = aq.quorum_put(request.key, TOMBSTONE)
+        quorum_put_dict = aq.quorum_put(request.key, TOMBSTONE)
 
-        aq.async_record_write(request.key)
+        aq.async_record_write(request.key, quorum_put_dict)
 
-        return kv_pb2.AgentDeleteReply(success=ok)
+        return kv_pb2.AgentDeleteReply(success=quorum_put_dict["result"])
 
     def Get(self, request, context):
 
-        status, value = aq.quorum_get(request.key)
+        quorum_get_dict = aq.quorum_get(request.key)
 
-        aq.async_record_read(request.key)
+        aq.async_record_read(request.key, quorum_get_dict)
 
-        if status == "QUORUM_FAILED":
+        if quorum_get_dict["result"] == "QUORUM_FAILED":
             return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.QUORUM_FAILED)
 
-        if status == "NOT_FOUND":
+        if quorum_get_dict["result"] == "NOT_FOUND":
             return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.NOT_FOUND)
 
-        return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.OK, value=value)
+        return kv_pb2.AgentGetReply(status=kv_pb2.AgentGetReply.OK, value=quorum_get_dict["response"])
 
 
 # start gRPC server to listen for client requests
