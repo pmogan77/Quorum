@@ -67,6 +67,14 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
             aq_metrics.reset_metrics()
 
             return kv_pb2.AgentPutReply(success=True)
+        
+        if request.key == "SIGNAL_CLEAR_KEYS":
+
+            print("\nTRIGGER RECEIVED: clearing keys\n")
+
+            aq_metrics.clear_keys()
+
+            return kv_pb2.AgentPutReply(success=True)
 
         start_time = time.time()
 

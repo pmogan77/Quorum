@@ -44,6 +44,17 @@ class KeyMetrics:
             print(f"\nREDIS ERROR: {e}\n")
             return default
     
+    def clear_keys(self):
+        with self.read_lock:
+            self.temp_latencies["read"] = {}
+        
+        with self.write_lock:
+            self.temp_latencies["write"] = {}
+        
+        self.redis_safe(
+            lambda: self.redis.flushall()
+        )
+    
     def reset_metrics(self):
         with self.read_lock:
             self.temp_latencies["read"] = {}
