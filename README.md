@@ -71,7 +71,7 @@ Reset metrics after running load:
 cd ..
 python signal_run_start.py
 ```
-This will remove all keys from the Redis server and reset the temporary in-memory metrics dictionaries. 
+This will remove all metrics keys from the Redis server and reset the temporary in-memory metrics dictionaries. 
 
 ------------------------------------------------------------------------
 
