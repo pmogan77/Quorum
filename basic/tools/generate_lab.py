@@ -27,6 +27,21 @@ def generate_lab(base_dir, cfg):
 
     base_ip = cfg["server_ip_base"]
 
+    collector_name = cfg["collector_name"]
+    collector_ip = cfg["collector_ip"]
+    collector_image = cfg["collector_image"]
+
+    jaeger_name = cfg["jaeger_name"]
+    jaeger_ip = cfg["jaeger_ip"]
+    jaeger_image = cfg["jaeger_image"]
+
+    collector_otlp_grpc_port = cfg["collector_otlp_grpc_port"]
+    collector_otlp_http_port = cfg["collector_otlp_http_port"]
+
+    jaeger_ui_port = cfg["jaeger_ui_port"]
+    jaeger_otlp_grpc_port = cfg["jaeger_otlp_grpc_port"]
+    jaeger_otlp_http_port = cfg["jaeger_otlp_http_port"]
+
     lab_lines = []
 
     cluster = {
@@ -51,7 +66,8 @@ def generate_lab(base_dir, cfg):
 set -e
 ip addr add {ip}/{subnet} dev eth0
 ip link set eth0 up
-python -u /shared/server.py --host {ip} --port {grpc_port} --node-id {name} >/tmp/kv-server.log 2>&1 &
+mkdir -p /shared/logs/{name}
+python -u /shared/server.py --host {ip} --port {grpc_port} --node-id {name} >/shared/logs/{name}/kv-server.log 2>&1 &
 """
 
         (base_dir / f"{name}.startup").write_text(startup)
@@ -82,7 +98,8 @@ python -u /shared/server.py --host {ip} --port {grpc_port} --node-id {name} >/tm
 set -e
 ip addr add {ip}/{subnet} dev eth0
 ip link set eth0 up
-python -u /shared/coordinator.py --node-id {name} >/tmp/coordinator.log 2>&1 &
+mkdir -p /shared/logs/{name}
+python -u /shared/coordinator.py --node-id {name} >/shared/logs/{name}/coordinator.log 2>&1 &
 """
 
         (base_dir / f"{name}.startup").write_text(startup)
@@ -112,6 +129,59 @@ ip link set eth0 up
     (base_dir / f"{client_name}.startup").write_text(client_startup)
 
     (base_dir / client_name).mkdir(exist_ok=True)
+
+
+    # otel collector
+    lab_lines.append(f'{collector_name}[0]="{network}"')
+    lab_lines.append(f'{collector_name}[image]="{collector_image}"')
+    lab_lines.append(f'{collector_name}[mem]="{mem}"')
+    lab_lines.append(f'{collector_name}[cpus]="{cpus}"')
+
+    collector_startup = f"""#!/bin/bash
+set -e
+ip addr add {collector_ip}/{subnet} dev eth0
+ip link set eth0 up
+mkdir -p /shared/logs/{collector_name}
+otelcol-contrib --config=/shared/otel/collector-config.yaml >/shared/logs/{collector_name}/collector.log 2>&1 &
+"""
+
+    (base_dir / f"{collector_name}.startup").write_text(collector_startup)
+    (base_dir / collector_name).mkdir(exist_ok=True)
+
+
+    # jaeger
+    lab_lines.append(f'{jaeger_name}[image]="{jaeger_image}"')
+    lab_lines.append(f'{jaeger_name}[mem]="{mem}"')
+    lab_lines.append(f'{jaeger_name}[cpus]="{cpus}"')
+    lab_lines.append(f'{jaeger_name}[port]="{jaeger_ui_port}:{jaeger_ui_port}/tcp"')
+    lab_lines.append(f'{jaeger_name}[bridged]="true"')
+
+    jaeger_startup = f"""#!/bin/bash
+set -e
+mkdir -p /shared/logs/{jaeger_name}
+jaeger --config=/shared/otel/jaeger-config.yaml >/shared/logs/jaeger/jaeger.log 2>&1 &
+"""
+
+    (base_dir / f"{jaeger_name}.startup").write_text(jaeger_startup)
+    (base_dir / jaeger_name).mkdir(exist_ok=True)
+
+    cluster["observability"] = {
+        "collector": {
+            "name": collector_name,
+            "host": collector_ip,
+            "otlp_grpc_port": collector_otlp_grpc_port,
+            "otlp_http_port": collector_otlp_http_port
+        },
+        "jaeger": {
+            "name": jaeger_name,
+            "host": jaeger_ip,
+            "ui_port": jaeger_ui_port,
+            "otlp_grpc_port": jaeger_otlp_grpc_port,
+            "otlp_http_port": jaeger_otlp_http_port
+        }
+    }
+
+
 
     # quorum settings
     cluster["R"] = (server_count // 2) + 1

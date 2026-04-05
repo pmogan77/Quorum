@@ -162,20 +162,20 @@ class AdaptiveQuorumManager:
 
     def start_transition(self, key, target):
 
-        lock_token = str(uuid.uuid4())
+        # lock_token = str(uuid.uuid4())
 
-        locked = self.redis_safe(
-            lambda: self.redis.set(
-                self.lock_key(key),
-                lock_token,
-                nx=True,
-                px=self.lock_ttl_ms
-            ),
-            False
-        )
+        # locked = self.redis_safe(
+        #     lambda: self.redis.set(
+        #         self.lock_key(key),
+        #         lock_token,
+        #         nx=True,
+        #         px=self.lock_ttl_ms
+        #     ),
+        #     False
+        # )
 
-        if not locked:
-            return
+        # if not locked:
+        #     return
 
         if target == "write_opt":
             self.redis_safe(
@@ -188,7 +188,7 @@ class AdaptiveQuorumManager:
                 )
             )
 
-            self.release_lock(key, lock_token)
+            # self.release_lock(key, lock_token)
             return
 
         # transition to read_opt
@@ -202,11 +202,11 @@ class AdaptiveQuorumManager:
             )
         )
 
-        repair_thread = threading.Thread(
-            target=self._repair_transition,
-            args=(key, lock_token)
-        )
-        repair_thread.start()
+        # repair_thread = threading.Thread(
+        #     target=self._repair_transition,
+        #     args=(key, lock_token)
+        # )
+        # repair_thread.start()
 
     def _repair_transition(self, key, lock_token):
         try:
@@ -221,7 +221,8 @@ class AdaptiveQuorumManager:
                 self.finalize_transition(key)
 
         finally:
-            self.release_lock(key, lock_token)
+            # self.release_lock(key, lock_token)
+            pass
 
     def finalize_transition(self, key):
 

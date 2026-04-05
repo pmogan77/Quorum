@@ -16,6 +16,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     maven \
     protobuf-compiler \
     git \
+    redis-tools \
+    iputils-ping \
+    dnsutils \
+    curl \
+    vim \
+    less \
     && rm -rf /var/lib/apt/lists/* \
     && python -m pip install --no-cache-dir -r /tmp/requirements.txt
 
