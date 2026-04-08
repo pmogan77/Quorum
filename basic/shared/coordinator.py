@@ -40,9 +40,12 @@ TIMEOUT = 2
 
 OTEL_EXPORTER_OTLP_ENDPOINT = "10.0.0.211:4317"
 OTEL_INSECURE = True
+ENABLE_TRACING = True
 
 
 def setup_tracing() -> trace.Tracer:
+    if not ENABLE_TRACING:
+        return trace.get_tracer(__name__)
     resource = Resource.create(
         {
             "service.name": "quorum-coordinator",

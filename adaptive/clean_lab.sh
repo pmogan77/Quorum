@@ -12,3 +12,5 @@ rm -rf c[0-9]*
 
 rm -rf client
 rm -rf redis
+
+sudo rm -rf shared/logs/*

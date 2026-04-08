@@ -1,0 +1,25 @@
+FROM cr.jaegertracing.io/jaegertracing/jaeger:2.17.0 AS jaegerbin
+
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    iproute2 \
+    iputils-ping \
+    net-tools \
+    procps \
+    dnsutils \
+    curl \
+    vim \
+    less \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=jaegerbin /cmd/jaeger/jaeger-linux /usr/local/bin/jaeger
+
+RUN chmod +x /usr/local/bin/jaeger
+
+CMD ["/bin/bash"]

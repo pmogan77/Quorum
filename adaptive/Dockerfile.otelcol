@@ -1,0 +1,24 @@
+FROM otel/opentelemetry-collector-contrib:0.149.0 AS otelbin
+
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    iproute2 \
+    iputils-ping \
+    net-tools \
+    procps \
+    dnsutils \
+    curl \
+    vim \
+    less \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=otelbin /otelcol-contrib /usr/local/bin/otelcol-contrib
+
+CMD ["/bin/bash"]

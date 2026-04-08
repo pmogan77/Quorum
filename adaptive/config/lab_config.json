@@ -40,5 +40,20 @@
     "read_threshold": 2.0,
     "write_threshold": 0.5,
     "min_operations": 50
-  }
+  },
+
+  "collector_name": "otelcol",
+  "collector_ip": "10.0.0.210",
+  "collector_image": "otel-lab-node:latest",
+
+  "jaeger_name": "jaeger",
+  "jaeger_ip": "10.0.0.211",
+  "jaeger_image": "jaeger-lab-node:latest",
+
+  "collector_otlp_grpc_port": 4317,
+  "collector_otlp_http_port": 4318,
+
+  "jaeger_ui_port": 16686,
+  "jaeger_otlp_grpc_port": 4317,
+  "jaeger_otlp_http_port": 4318
 }
