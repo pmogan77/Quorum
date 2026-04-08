@@ -50,6 +50,8 @@ class AdaptiveQuorumManager:
             decode_responses=True,
         )
 
+        self.redis.ping()
+
         self.write_opt = config["quorum_policies"]["write_opt"]
         self.read_opt = config["quorum_policies"]["read_opt"]
         self.policy_cfg = config["adaptive_policy"]

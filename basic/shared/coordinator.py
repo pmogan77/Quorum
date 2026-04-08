@@ -79,6 +79,7 @@ STUBS = {}
 for name, node in NODES.items():
     addr = f"{node['host']}:{node['port']}"
     channel = grpc.insecure_channel(addr)
+    grpc.channel_ready_future(channel).result(timeout=5)
     stub = kv_pb2_grpc.KVStoreStub(channel)
     CHANNELS[name] = channel
     STUBS[name] = stub

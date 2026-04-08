@@ -1,5 +1,5 @@
 {
-  "lab_name": "QuorumKV",
+  "lab_name": "QuorumKV-adaptive",
   "lab_description": "Quorum key value store lab",
   "lab_version": "1.0",
   "lab_author": "Praveen",

@@ -73,6 +73,7 @@ STUBS = {}
 for name, node in NODES.items():
     addr = f"{node['host']}:{node['port']}"
     channel = grpc.insecure_channel(addr)
+    grpc.channel_ready_future(channel).result(timeout=5)
     stub = kv_pb2_grpc.KVStoreStub(channel)
     CHANNELS[name] = channel
     STUBS[name] = stub
@@ -95,13 +96,13 @@ AQM = AdaptiveQuorumManager(
 class AgentService(kv_pb2_grpc.AgentKVServicer):
     def Put(self, request, context):
         with tracer.start_as_current_span("coordinator.put", kind=SpanKind.SERVER) as span:
-            current_quorum = AQM.get_quorum(request.key)
+            # current_quorum = AQM.get_quorum(request.key)
 
             span.set_attribute("db.operation", "put")
             span.set_attribute("kv.key", request.key)
             span.set_attribute("kv.value_length", len(request.value))
-            span.set_attribute("quorum.r", current_quorum["R"])
-            span.set_attribute("quorum.w", current_quorum["W"])
+            # span.set_attribute("quorum.r", current_quorum["R"])
+            # span.set_attribute("quorum.w", current_quorum["W"])
             span.set_attribute("quorum.cluster_size", len(NODES))
             span.set_attribute("coordinator.node_id", node_id)
             span.set_attribute("adaptive.state", AQM.get_state(request.key))
@@ -131,12 +132,12 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
     def Delete(self, request, context):
         with tracer.start_as_current_span("coordinator.delete", kind=SpanKind.SERVER) as span:
-            current_quorum = AQM.get_quorum(request.key)
+            # current_quorum = AQM.get_quorum(request.key)
 
             span.set_attribute("db.operation", "delete")
             span.set_attribute("kv.key", request.key)
-            span.set_attribute("quorum.r", current_quorum["R"])
-            span.set_attribute("quorum.w", current_quorum["W"])
+            # span.set_attribute("quorum.r", current_quorum["R"])
+            # span.set_attribute("quorum.w", current_quorum["W"])
             span.set_attribute("quorum.cluster_size", len(NODES))
             span.set_attribute("coordinator.node_id", node_id)
             span.set_attribute("adaptive.state", AQM.get_state(request.key))
@@ -166,12 +167,12 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
     def Get(self, request, context):
         with tracer.start_as_current_span("coordinator.get", kind=SpanKind.SERVER) as span:
-            current_quorum = AQM.get_quorum(request.key)
+            # current_quorum = AQM.get_quorum(request.key)
 
             span.set_attribute("db.operation", "get")
             span.set_attribute("kv.key", request.key)
-            span.set_attribute("quorum.r", current_quorum["R"])
-            span.set_attribute("quorum.w", current_quorum["W"])
+            # span.set_attribute("quorum.r", current_quorum["R"])
+            # span.set_attribute("quorum.w", current_quorum["W"])
             span.set_attribute("quorum.cluster_size", len(NODES))
             span.set_attribute("coordinator.node_id", node_id)
             span.set_attribute("adaptive.state", AQM.get_state(request.key))

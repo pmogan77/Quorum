@@ -9,7 +9,7 @@ JAEGER_IFACE="eth1"
 COLLECTOR_NODE="otelcol"
 
 echo "[1/7] Start Jaeger container only..."
-kathara lstart "${JAEGER_NODE}"
+kathara lstart "${JAEGER_NODE}" --noterminals
 
 echo "[2/7] Attach Jaeger to ${LAB_NET}..."
 kathara lconfig -n "${JAEGER_NODE}" --add "${LAB_NET}"
@@ -38,9 +38,11 @@ for i in $(seq 1 20); do
 done
 
 echo "[6/7] Start collector..."
-kathara lstart "${COLLECTOR_NODE}"
+kathara lstart "${COLLECTOR_NODE}" --noterminals
+
+kathara lstart "client"
 
 echo "[7/7] Start remaining nodes..."
-kathara lstart --exclude "${JAEGER_NODE}" "${COLLECTOR_NODE}"
+kathara lstart --exclude "${JAEGER_NODE}" "${COLLECTOR_NODE}" "client" --noterminals
 
 echo "Jaeger UI: http://localhost:16686"
