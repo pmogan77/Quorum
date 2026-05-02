@@ -789,10 +789,10 @@ class AdaptiveQuorumManager:
         # shared_w.state = "write_opt"
 
         # FORCE READ OPT
-        shared_w = SharedThreshold(self.read_opt["W"])
-        shared_w.enter_finished = True
-        shared_w.enter_done = False
-        shared_w.state = "read_opt"
+        # shared_w = SharedThreshold(self.read_opt["W"])
+        # shared_w.enter_finished = True
+        # shared_w.enter_done = False
+        # shared_w.state = "read_opt"
 
         parent_span.set_attribute("quorum.r", self.strict_policy["R"])
         parent_span.set_attribute("quorum.w", shared_w.value)
