@@ -10,11 +10,11 @@ import kv_pb2
 import kv_pb2_grpc
 
 from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, Status, StatusCode
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
 from adaptive_quorum import AdaptiveQuorumManager
 
@@ -33,7 +33,7 @@ TOMBSTONE = CONFIG["tombstone"]
 
 CLIENT_ID = str(uuid.uuid4())
 TIMEOUT = 2
-ENABLE_TRACING = True
+ENABLE_TRACING = False
 
 COLLECTOR_CFG = CONFIG["observability"]["collector"]
 OTEL_EXPORTER_OTLP_ENDPOINT = f"{COLLECTOR_CFG['host']}:{COLLECTOR_CFG['otlp_grpc_port']}"
@@ -96,17 +96,15 @@ AQM = AdaptiveQuorumManager(
 class AgentService(kv_pb2_grpc.AgentKVServicer):
     def Put(self, request, context):
         with tracer.start_as_current_span("coordinator.put", kind=SpanKind.SERVER) as span:
-            # current_quorum = AQM.get_quorum(request.key)
+            strict = AQM.strict_policy
 
             span.set_attribute("db.operation", "put")
             span.set_attribute("kv.key", request.key)
             span.set_attribute("kv.value_length", len(request.value))
-            # span.set_attribute("quorum.r", current_quorum["R"])
-            # span.set_attribute("quorum.w", current_quorum["W"])
+            span.set_attribute("quorum.r", strict["R"])
+            span.set_attribute("quorum.w", strict["W"])
             span.set_attribute("quorum.cluster_size", len(NODES))
             span.set_attribute("coordinator.node_id", node_id)
-            span.set_attribute("adaptive.state", AQM.get_state(request.key))
-
             span.add_event("client_put_received")
 
             start = time.perf_counter()
@@ -115,13 +113,7 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
             span.set_attribute("quorum.success", ok)
             span.set_attribute("operation.duration_ms", duration_ms)
-            span.add_event(
-                "client_put_completed",
-                {
-                    "success": ok,
-                    "duration_ms": duration_ms,
-                },
-            )
+            span.add_event("client_put_completed", {"success": ok, "duration_ms": duration_ms})
 
             AQM.async_record_write(request.key, trace.get_current_span().get_span_context())
 
@@ -132,16 +124,14 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
     def Delete(self, request, context):
         with tracer.start_as_current_span("coordinator.delete", kind=SpanKind.SERVER) as span:
-            # current_quorum = AQM.get_quorum(request.key)
+            strict = AQM.strict_policy
 
             span.set_attribute("db.operation", "delete")
             span.set_attribute("kv.key", request.key)
-            # span.set_attribute("quorum.r", current_quorum["R"])
-            # span.set_attribute("quorum.w", current_quorum["W"])
+            span.set_attribute("quorum.r", strict["R"])
+            span.set_attribute("quorum.w", strict["W"])
             span.set_attribute("quorum.cluster_size", len(NODES))
             span.set_attribute("coordinator.node_id", node_id)
-            span.set_attribute("adaptive.state", AQM.get_state(request.key))
-
             span.add_event("client_delete_received")
 
             start = time.perf_counter()
@@ -150,13 +140,7 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
             span.set_attribute("quorum.success", ok)
             span.set_attribute("operation.duration_ms", duration_ms)
-            span.add_event(
-                "client_delete_completed",
-                {
-                    "success": ok,
-                    "duration_ms": duration_ms,
-                },
-            )
+            span.add_event("client_delete_completed", {"success": ok, "duration_ms": duration_ms})
 
             AQM.async_record_write(request.key, trace.get_current_span().get_span_context())
 
@@ -167,16 +151,14 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
     def Get(self, request, context):
         with tracer.start_as_current_span("coordinator.get", kind=SpanKind.SERVER) as span:
-            # current_quorum = AQM.get_quorum(request.key)
+            strict = AQM.strict_policy
 
             span.set_attribute("db.operation", "get")
             span.set_attribute("kv.key", request.key)
-            # span.set_attribute("quorum.r", current_quorum["R"])
-            # span.set_attribute("quorum.w", current_quorum["W"])
+            span.set_attribute("quorum.r", strict["R"])
+            span.set_attribute("quorum.w", strict["W"])
             span.set_attribute("quorum.cluster_size", len(NODES))
             span.set_attribute("coordinator.node_id", node_id)
-            span.set_attribute("adaptive.state", AQM.get_state(request.key))
-
             span.add_event("client_get_received")
 
             start = time.perf_counter()
@@ -185,13 +167,7 @@ class AgentService(kv_pb2_grpc.AgentKVServicer):
 
             span.set_attribute("quorum.result_status", status)
             span.set_attribute("operation.duration_ms", duration_ms)
-            span.add_event(
-                "client_get_completed",
-                {
-                    "status": status,
-                    "duration_ms": duration_ms,
-                },
-            )
+            span.add_event("client_get_completed", {"status": status, "duration_ms": duration_ms})
 
             AQM.async_record_read(request.key, trace.get_current_span().get_span_context())
 

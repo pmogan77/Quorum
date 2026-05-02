@@ -42,7 +42,9 @@ kathara lstart "${COLLECTOR_NODE}" --noterminals
 
 kathara lstart "client"
 
-echo "[7/7] Start remaining nodes..."
-kathara lstart --exclude "${JAEGER_NODE}" "${COLLECTOR_NODE}" "client" --noterminals
+kathara lstart "redis" --noterminals
 
-echo "Jaeger UI: http://localhost:16686"
+echo "[7/7] Start remaining nodes..."
+kathara lstart --exclude "${JAEGER_NODE}" "${COLLECTOR_NODE}" "client" "redis" --noterminals
+
+echo "Jaeger UI: http://localhost:16687"

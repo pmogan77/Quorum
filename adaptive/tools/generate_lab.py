@@ -63,6 +63,8 @@ def generate_lab(base_dir, cfg):
     collector_otlp_http_port = cfg["collector_otlp_http_port"]
 
     jaeger_ui_port = cfg["jaeger_ui_port"]
+    # should be one larger than ui port
+    jaeger_expose_port = cfg["jaeger_ui_port"] + 1
     jaeger_otlp_grpc_port = cfg["jaeger_otlp_grpc_port"]
     jaeger_otlp_http_port = cfg["jaeger_otlp_http_port"]
 
@@ -167,7 +169,7 @@ otelcol-contrib --config=/shared/otel/collector-config.yaml >/shared/logs/{colle
 
     # jaeger
     add_common_device_lines(lab_lines, jaeger_name, jaeger_image, mem, cpus)
-    lab_lines.append(f'{jaeger_name}[port]="{jaeger_ui_port}:{jaeger_ui_port}/tcp"')
+    lab_lines.append(f'{jaeger_name}[port]="{jaeger_expose_port}:{jaeger_ui_port}/tcp"')
     lab_lines.append(f'{jaeger_name}[bridged]="true"')
 
     jaeger_startup = f"""#!/bin/bash

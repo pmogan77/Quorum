@@ -40,7 +40,7 @@ TIMEOUT = 2
 
 OTEL_EXPORTER_OTLP_ENDPOINT = "10.0.0.211:4317"
 OTEL_INSECURE = True
-ENABLE_TRACING = True
+ENABLE_TRACING = False
 
 
 def setup_tracing() -> trace.Tracer:
@@ -247,6 +247,11 @@ def quorum_get(key):
             "timestamp": latest.timestamp,
         },
     )
+    
+    if latest.value == TOMBSTONE:
+        parent_span.add_event("read_latest_is_tombstone")
+        return "NOT_FOUND", None
+
     return "OK", latest.value
 
 
