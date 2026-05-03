@@ -1,4 +1,4 @@
-=== DEBUG SUMMARY ===
+DEBUG SUMMARY
 Insert failures: 0
 Insert exceptions: 0
 Read exceptions: 0

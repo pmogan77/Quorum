@@ -51,7 +51,7 @@ public class QuorumDB extends DB {
     @Override
     public void cleanup() throws DBException {
 
-        System.out.println("=== DEBUG SUMMARY ===");
+        System.out.println("DEBUG SUMMARY");
         System.out.println("Insert failures: " + insertFailures);
         System.out.println("Insert exceptions: " + insertExceptions);
         System.out.println("Read exceptions: " + readExceptions);
